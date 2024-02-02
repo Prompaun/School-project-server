@@ -27,12 +27,23 @@ connection.connect((err) => {
 
 // CREATE Routes
 app.post("/register", async (req, res) => {
-  const { Email, Password } = req.body;
+//   const { Email, Password } = req.body;
 
-  try {
+  const data = req.body;
+
+    if (!Array.isArray(data)) {
+        return res.status(400).json({ error: "Invalid request body. Expecting an array of data." });
+    }
+
+    try {
+        const values = data.map(item => [
+            item.Email,
+            item.Password
+        ]);
+
       connection.query(
-          "INSERT INTO parent_login(Email, Password) VALUES(?, ?)",
-          [Email, Password],
+          "INSERT INTO parent_login(Email, Password) VALUES ?",
+          [values],
           (err, results, fields) => {
               if (err) {
                 if (err.code === 'ER_DUP_ENTRY') {
