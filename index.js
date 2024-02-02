@@ -73,7 +73,6 @@ app.get("/user_information/:Email", async (req, res) => {
     }
 });
 
-
 app.post("/NewStudent_information", async (req, res) => {
     const { 
         Applicant_ID, 
@@ -83,17 +82,24 @@ app.post("/NewStudent_information", async (req, res) => {
         LastName, 
         Student_DOB, 
         Avatar, 
-        ParentEmail, 
+        House_No,
+        Moo,
+        Soi,
+        Road,
+        Province,
+        District,
+        Sub_District,
         Transcript_type, 
         Transcript_file, 
         BirthCert_file, 
-        HouseReg_file 
+        HouseReg_file,
+        ParentEmail 
     } = req.body;
 
     try {
         connection.query(
-            "INSERT INTO Applicant (Applicant_ID, Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, ParentEmail, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [Applicant_ID, Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, ParentEmail, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file],
+            "INSERT INTO Applicant (Applicant_ID, Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, House_No, Moo, Soi, Road, Province, District, Sub_District, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file, ParentEmail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [Applicant_ID, Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, House_No, Moo, Soi, Road, Province, District, Sub_District, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file, ParentEmail],
             (err, results, fields) => {
                 if (err) {
                     if (err.code === 'ER_DUP_ENTRY') {
@@ -111,63 +117,32 @@ app.post("/NewStudent_information", async (req, res) => {
         return res.status(500).send();
     }
 });
-// app.post("/NewStudent_information", async (req, res) => {
-//     const data = req.body;
 
-//     // Check if data is an array
-//     if (!Array.isArray(data)) {
-//         return res.status(400).json({ error: "Invalid request body. Expecting an array of data." });
-//     }
+
+// app.post("/NewStudent_information", async (req, res) => {
+//     const { 
+//         Applicant_ID, 
+//         Student_NID, 
+//         NameTitle, 
+//         FirstName, 
+//         LastName, 
+//         Student_DOB, 
+//         Avatar, 
+//         ParentEmail, 
+//         Transcript_type, 
+//         Transcript_file, 
+//         BirthCert_file, 
+//         HouseReg_file 
+//     } = req.body;
 
 //     try {
-//         const values = data.map(item => [
-//             item.Applicant_ID,
-//             item.Student_NID,
-//             item.NameTitle,
-//             item.FirstName,
-//             item.LastName,
-//             item.Student_DOB,
-//             item.Avatar,
-//             item.ParentEmail,
-//             item.Transcript_type,
-//             item.Transcript_file,
-//             item.BirthCert_file,
-//             item.HouseReg_file
-//         ]);
-
 //         connection.query(
-//             "INSERT INTO Applicant (Applicant_ID, Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, ParentEmail, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file) VALUES ?",
-//             [values],
+//             "INSERT INTO Applicant (Applicant_ID, Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, ParentEmail, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+//             [Applicant_ID, Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, ParentEmail, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file],
 //             (err, results, fields) => {
 //                 if (err) {
 //                     if (err.code === 'ER_DUP_ENTRY') {
 //                         return res.status(409).json({ error: "Identification number already exists." });
-//                     } else {
-//                         console.log("Error while inserting student information into the database", err);
-//                         return res.status(400).json({ error: err.message });
-//                     }
-//                 }
-//                 return res.status(201).json({ message: "Student information successfully recorded!" });
-//             }
-//         );
-//     } catch (err) {
-//         console.log(err);
-//         return res.status(500).send();
-//     }
-// });
-
-
-
-// app.patch("/Define_Applicant_ID/:Student_NID", async (req, res) => {
-//     const Student_NID = req.params.Student_NID;
-//     const applicant_ID = req.body.applicant_ID;
-
-//     try {
-//         connection.query("UPDATE applicant SET applicant_ID = ? WHERE Student_NID = ?", [applicant_ID, Student_NID], (err, results, fields) => {
-//                 if (err) {
-//                     if (err.code === 'ER_DUP_ENTRY') {
-//                         return res.status(409);
-//                         // .json({ error: "Identification number already exists." })
 //                     } else {
 //                         console.log("Error while inserting student information into the database", err);
 //                         return res.status(400).json({ error: err.message });
@@ -203,7 +178,7 @@ app.patch("/Define_Applicant_ID/:Student_NID", async (req, res) => {
             connection.query("UPDATE applicant SET applicant_ID = ? WHERE Student_NID = ?", [applicant_ID, Student_NID], (err, results, fields) => {
                 if (err) {
                     if (err.code === 'ER_DUP_ENTRY') {
-                        return res.status(409).json({ error: "Identification number already exists." });
+                        return res.status(409).json({ error: "applicant id already exists." });
                     } else {
                         console.log("Error while updating student information in the database", err);
                         return res.status(400).json({ error: err.message });
