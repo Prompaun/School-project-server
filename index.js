@@ -52,13 +52,13 @@ app.post("/register", async (req, res) => {
   }
 })
 
-app.get("/user_information/:Parent_ID", async (req, res) => {
-    const Parent_ID = req.params.Parent_ID;
+app.get("/user_information/:Email", async (req, res) => {
+    const Email = req.params.Email;
 
     try {
         connection.query(
-            "SELECT Avatar, FirstName, LastName, Email FROM Parent WHERE Parent_ID = ?",
-            [Parent_ID],
+            "SELECT Avatar, FirstName, LastName, Email FROM Parent WHERE Email = ?",
+            [Email],
             (err, results, fields) => {
                 if (err) {
                     console.log(err);
@@ -158,28 +158,66 @@ app.post("/NewStudent_information", async (req, res) => {
 
 
 
+// app.patch("/Define_Applicant_ID/:Student_NID", async (req, res) => {
+//     const Student_NID = req.params.Student_NID;
+//     const applicant_ID = req.body.applicant_ID;
+
+//     try {
+//         connection.query("UPDATE applicant SET applicant_ID = ? WHERE Student_NID = ?", [applicant_ID, Student_NID], (err, results, fields) => {
+//                 if (err) {
+//                     if (err.code === 'ER_DUP_ENTRY') {
+//                         return res.status(409);
+//                         // .json({ error: "Identification number already exists." })
+//                     } else {
+//                         console.log("Error while inserting student information into the database", err);
+//                         return res.status(400).json({ error: err.message });
+//                     }
+//                 }
+//                 return res.status(201).json({ message: "Student information successfully recorded!" });
+//             }
+//         );
+//     } catch (err) {
+//         console.log(err);
+//         return res.status(500).send();
+//     }
+// });
+
 app.patch("/Define_Applicant_ID/:Student_NID", async (req, res) => {
     const Student_NID = req.params.Student_NID;
     const applicant_ID = req.body.applicant_ID;
 
     try {
-        connection.query("UPDATE applicant SET applicant_ID = ? WHERE Student_NID = ?", [applicant_ID, Student_NID], (err, results, fields) => {
+        // เพิ่มเงื่อนไขสำหรับตรวจสอบว่ามี Student_NID ที่กำหนดหรือไม่
+        connection.query("SELECT * FROM applicant WHERE Student_NID = ?", [Student_NID], (selectErr, selectResults, selectFields) => {
+            if (selectErr) {
+                console.log("Error while checking Student_NID in the database", selectErr);
+                return res.status(500).json({ error: selectErr.message });
+            }
+
+            // ถ้าไม่พบ Student_NID
+            if (selectResults.length === 0) {
+                return res.status(404).json({ error: "Student with the provided ID not found." });
+            }
+
+            // ถ้าพบ Student_NID, ทำการอัปเดตข้อมูล
+            connection.query("UPDATE applicant SET applicant_ID = ? WHERE Student_NID = ?", [applicant_ID, Student_NID], (err, results, fields) => {
                 if (err) {
                     if (err.code === 'ER_DUP_ENTRY') {
                         return res.status(409).json({ error: "Identification number already exists." });
                     } else {
-                        console.log("Error while inserting student information into the database", err);
+                        console.log("Error while updating student information in the database", err);
                         return res.status(400).json({ error: err.message });
                     }
                 }
-                return res.status(201).json({ message: "Student information successfully recorded!" });
-            }
-        );
+                return res.status(200).json({ message: "Student information successfully updated!" });
+            });
+        });
     } catch (err) {
         console.log(err);
         return res.status(500).send();
     }
 });
+
 
 
 app.post("/Parent_information", async (req, res) => {
