@@ -1,41 +1,26 @@
-require("dotenv").config();
-const express = require("express");
-const cors = require("cors");
-const passport = require("passport");
-const authRoute = require("./routes/auth");
-// const cookieSession = require("cookie-session");
-const session = require("express-session");
-const path = require ('path');
-const passportStrategy = require("./passport");
-const app = express();
+const Parent_api = require('./Parent-api');
+const Personnel_api = require('./Pesonnel-api');
+const Student_api = require('./Student-api');
 
-// app.use(
-// 	cookieSession({
-// 		name: "session",
-// 		keys: ["cyberwolve"],
-// 		maxAge: 24 * 60 * 60 * 100,
-// 	})
-// );
-app.use(
-	session({
-	  secret: process.env.CLIENT_SECRET,
-	  resave: false,
-	  saveUninitialized: true,
-	})
-  );
+var express = require('express')
+var cors = require('cors')
+require('dotenv').config();
 
-app.use(passport.initialize());
-app.use(passport.session());
+// ต่อ database หรือทำสิ่งอื่น ๆ ที่ต้องการกับค่า config
+var app = express();
+app.use(express.json());
 
-app.use(
-	cors({
-		origin: "http://localhost:5173",
-		methods: "GET,POST,PUT,DELETE",
-		credentials: true,
-	})
-);
+app.use(cors())
 
-app.use("/auth", authRoute);
+//use routes
+app.use(Parent_api);
+// app.use(Personnel_api);
+// app.use(Student_api);
 
-const port = process.env.PORT || 8080;
-app.listen(port, () => console.log(`Listenting on port ${port}...`));
+
+//ser port
+const PORT = process.env.PORT || 8080;
+
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+})

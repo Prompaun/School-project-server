@@ -1,26 +1,32 @@
-const Parent_api = require('./Parent-api');
-const Personnel_api = require('./Pesonnel-api');
-const Student_api = require('./Student-api');
+const session = require("express-session");
+const express = require("express");
+const cors = require("cors");
+const passportSetup = require("./passport");
+const passport = require("passport");
+const authRoute = require("./routes/auth");
+const app = express();
 
-var express = require('express')
-var cors = require('cors')
-require('dotenv').config();
+app.use(
+	session({
+	  secret: "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",
+	  resave: false,
+	  saveUninitialized: true,
+	})
+  );
 
-// ต่อ database หรือทำสิ่งอื่น ๆ ที่ต้องการกับค่า config
-var app = express();
-app.use(express.json());
+app.use(passport.initialize());
+app.use(passport.session());
 
-app.use(cors())
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    methods: "GET,POST,PUT,DELETE",
+    credentials: true,
+  })
+);
 
-//use routes
-app.use(Parent_api);
-// app.use(Personnel_api);
-// app.use(Student_api);
+app.use("/auth", authRoute);
 
-
-//ser port
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-})
+app.listen("5000", () => {
+  console.log("Server is running!");
+});

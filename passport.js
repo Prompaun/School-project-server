@@ -1,39 +1,60 @@
-// const GoogleStrategy = require("passport-google-oauth20").Strategy;
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
+// const GithubStrategy = require("passport-github2").Strategy;
+// const FacebookStrategy = require("passport-facebook").Strategy;
 const passport = require("passport");
-const { Strategy: GoogleStrategy } = require("passport-google-oauth20");
-require ('dotenv').config ();
-// passport.use(
-// 	new GoogleStrategy(
-// 		{
-// 			clientID: process.env.CLIENT_ID,
-// 			clientSecret: process.env.CLIENT_SECRET,
-// 			callbackURL: "/auth/google/callback",
-// 			scope: ["profile", "email"],
-// 		},
-// 		function (accessToken, refreshToken, profile, callback) {
-// 			callback(null, profile);
-// 		}
-// 	)
-// );
+
+const GOOGLE_CLIENT_ID = "56880766590-iki02gu6p9ssen1kun7gjqempsct2c98.apps.googleusercontent.com";
+const GOOGLE_CLIENT_SECRET = "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";
+
+// GITHUB_CLIENT_ID = "your id";
+// GITHUB_CLIENT_SECRET = "your id";
+
+// FACEBOOK_APP_ID = "your id";
+// FACEBOOK_APP_SECRET = "your id";
+
 passport.use(
-	new GoogleStrategy(
-	  {
-		clientID: process.env.CLIENT_ID,
-		clientSecret: process.env.CLIENT_SECRET,
-		callbackURL: "/auth/google/callback",
-		scope: ["profile", "email"],
-	  },
-	  function (accessToken, refreshToken, profile, done) {
-		// Customize this part based on your needs
-		return done(null, profile);
-	  }
-	)
-  );
+  new GoogleStrategy(
+    {
+      clientID: GOOGLE_CLIENT_ID,
+      clientSecret: GOOGLE_CLIENT_SECRET,
+      callbackURL: "/auth/google/callback",
+    },
+    function (accessToken, refreshToken, profile, done) {
+      done(null, profile);
+    }
+  )
+);
+
+// passport.use(
+//   new GithubStrategy(
+//     {
+//       clientID: GITHUB_CLIENT_ID,
+//       clientSecret: GITHUB_CLIENT_SECRET,
+//       callbackURL: "/auth/github/callback",
+//     },
+//     function (accessToken, refreshToken, profile, done) {
+//       done(null, profile);
+//     }
+//   )
+// );
+
+// passport.use(
+//   new FacebookStrategy(
+//     {
+//       clientID: FACEBOOK_APP_ID,
+//       clientSecret: FACEBOOK_APP_SECRET,
+//       callbackURL: "/auth/facebook/callback",
+//     },
+//     function (accessToken, refreshToken, profile, done) {
+//       done(null, profile);
+//     }
+//   )
+// );
 
 passport.serializeUser((user, done) => {
-	done(null, user);
+  done(null, user);
 });
 
 passport.deserializeUser((user, done) => {
-	done(null, user);
+  done(null, user);
 });
