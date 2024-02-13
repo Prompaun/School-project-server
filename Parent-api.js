@@ -2,6 +2,9 @@ var express = require('express')
 const router = express.Router();
 require('dotenv').config();
 
+const { Mutex } = require('async-mutex');
+const mutex = new Mutex();
+
 // get the client
 const mysql = require('mysql2');
 const connection = mysql.createConnection({
@@ -63,6 +66,7 @@ router.post("/register", async (req, res) => {
   }
 })
 
+//คิวรี่ข้อมูลของคนที่ล็อคอินอยู่มาแสดง
 router.get("/user_information/:Email", async (req, res) => {
     const Email = req.params.Email;
 
@@ -84,6 +88,7 @@ router.get("/user_information/:Email", async (req, res) => {
     }
 });
 
+//นำข้อมูลผู้สมัครลงฐานข้อมูล
 router.post("/NewStudent_information", async (req, res) => {
     const { 
         Applicant_ID, 
@@ -168,6 +173,7 @@ router.post("/NewStudent_information", async (req, res) => {
 //     }
 // });
 
+//กำหนดเลข Applicant_ID ของผู้สมัคร จาก Student_NID
 router.patch("/Define_Applicant_ID/:Student_NID", async (req, res) => {
     const Student_NID = req.params.Student_NID;
     const applicant_ID = req.body.applicant_ID;
@@ -205,7 +211,7 @@ router.patch("/Define_Applicant_ID/:Student_NID", async (req, res) => {
 });
 
 
-
+//นำข้อมูลของผู้ปกครองผู้สมัครลงฐานข้อมูล
 router.post("/Parent_information", async (req, res) => {
     const data = req.body;
 
@@ -249,6 +255,7 @@ router.post("/Parent_information", async (req, res) => {
     }
 });
 
+//นำข้อมูลทะเบียนบ้านของผู้สมัครลงฐานข้อมูล
 router.post("/Household_information", async (req, res) => {
     const { 
         Applicant_ID,
@@ -278,6 +285,453 @@ router.post("/Household_information", async (req, res) => {
         return res.status(500).send();
     }
 });
+
+// //เพิ่มข้อมูลผู้สมัครลงฐานข้อมูล
+// router.post('/addApplicant', (req, res) => {
+//     const applicantData = {
+//         Student_NID: req.body.Student_NID,
+//         NameTitle: req.body.NameTitle,
+//         FirstName: req.body.FirstName,
+//         LastName: req.body.LastName,
+//         Student_DOB: req.body.Student_DOB,
+//         Avatar: req.body.Avatar,
+//         House_No: req.body.House_No,
+//         Moo: req.body.Moo,
+//         Soi: req.body.Soi,
+//         Road: req.body.Road,
+//         Province: req.body.Province,
+//         District: req.body.District,
+//         Sub_District: req.body.Sub_District,
+//         Transcript_type: req.body.Transcript_type,
+//         Transcript_file: req.body.Transcript_file,
+//         BirthCert_file: req.body.BirthCert_file,
+//         HouseReg_file: req.body.HouseReg_file,
+//         ParentEmail: req.body.ParentEmail
+//     };
+
+//     // Insert data into Applicant table
+//     connection.query('INSERT INTO Applicant SET ?', applicantData, (error, applicantResult, fields) => {
+//         if (error) {
+//             console.error('Error inserting data into Applicant table: ' + error.message);
+//             return res.status(500).json({ error: 'Error inserting data into Applicant database' });
+//         }
+
+//         console.log('Applicant data inserted successfully');
+        
+//         // Insert data into Applicant_ParentEmail table
+//         const applicantID = applicantResult.insertId;
+//         const parentEmailData = {
+//             Student_NID: req.body.Student_NID,
+//             Applicant_ID: applicantID,
+//             first_ParentEmail: req.body.first_ParentEmail,
+//             second_ParentEmail: req.body.second_ParentEmail,
+//             third_ParentEmail: req.body.third_ParentEmail
+//         };
+
+//         connection.query('INSERT INTO Applicant_ParentEmail SET ?', parentEmailData, (err, parentEmailResult, fields) => {
+//             if (err) {
+//                 console.error('Error inserting data into Applicant_ParentEmail table: ' + err.message);
+//                 return res.status(500).json({ error: 'Error inserting data into database' });
+//             }
+
+//             console.log('Parent email data inserted successfully');
+//             return res.status(200).json({ message: 'Data inserted successfully' });
+//         });
+//     });
+// });
+
+//เพิ่มข้อมูบลผู้สมัครลงฐานข้อมูล
+router.post('/addApplicant', async (req, res) => {
+    const applicantData = {
+        Student_NID: req.body.Student_NID,
+        NameTitle: req.body.NameTitle,
+        FirstName: req.body.FirstName,
+        LastName: req.body.LastName,
+        Student_DOB: req.body.Student_DOB,
+        Avatar: req.body.Avatar,
+        House_No: req.body.House_No,
+        Moo: req.body.Moo,
+        Soi: req.body.Soi,
+        Road: req.body.Road,
+        Province: req.body.Province,
+        District: req.body.District,
+        Sub_District: req.body.Sub_District,
+        Transcript_type: req.body.Transcript_type,
+        Transcript_file: req.body.Transcript_file,
+        BirthCert_file: req.body.BirthCert_file,
+        HouseReg_file: req.body.HouseReg_file,
+        ParentEmail: req.body.ParentEmail
+    };
+
+    try {
+        const release = await mutex.acquire();
+        try {
+            // Insert data into Applicant table
+            const applicantResult = await insertApplicant(applicantData);
+            
+            // Insert data into Applicant_ParentEmail table
+            await insertParentEmail(applicantData.Student_NID, applicantResult.insertId, req.body.first_ParentEmail, req.body.second_ParentEmail, req.body.third_ParentEmail);
+            
+            console.log('Data inserted successfully');
+            return res.status(200).json({ message: 'Data inserted successfully' });
+        } finally {
+            release();
+        }
+    } catch (error) {
+        console.error('Error inserting data:', error);
+        return res.status(500).json({ error: 'Error inserting data into database' });
+    }
+});
+
+async function insertApplicant(data) {
+    return new Promise((resolve, reject) => {
+        connection.query('INSERT INTO Applicant SET ?', data, (error, result, fields) => {
+            if (error) {
+                reject(error);
+            } else {
+                resolve(result);
+            }
+        });
+    });
+}
+
+async function insertParentEmail(studentNID, applicantID, firstParentEmail, secondParentEmail, thirdParentEmail) {
+    const parentEmailData = {
+        Student_NID: studentNID,
+        Applicant_ID: applicantID,
+        first_ParentEmail: firstParentEmail,
+        second_ParentEmail: secondParentEmail,
+        third_ParentEmail: thirdParentEmail
+    };
+
+    return new Promise((resolve, reject) => {
+        connection.query('INSERT INTO Applicant_ParentEmail SET ?', parentEmailData, (error, result, fields) => {
+            if (error) {
+                reject(error);
+            } else {
+                resolve(result);
+            }
+        });
+    });
+}
+
+
+
+// คิวรี่ข้อมูลการสมัครเรียนด้วย applicantId
+router.get("/CheckEnroll_status/:applicantId", async (req, res) => {
+    const applicantId = req.params.applicantId;
+
+    try {
+        connection.query(
+            "SELECT app.NameTitle, app.FirstName, app.LastName, app.Student_NID, enroll.Enroll_ID, enroll.Enroll_Year, enroll.Enroll_Course, enroll.Enroll_Status FROM applicant AS app JOIN enrollment AS enroll ON app.Applicant_ID = enroll.Enroll_ID WHERE app.Applicant_ID = ?",
+            [applicantId],
+            (err, results, fields) => {
+                if (err) {
+                    console.log("Error while retrieving data from the database", err);
+                    return res.status(500).json({ error: err.message });
+                }
+
+                if (results.length === 0) {
+                    return res.status(404).json({ error: "Applicant not found" });
+                }
+
+                // Map through the results array to format the data
+                const formattedData = results.map(result => ({
+                    NameTitle: result.NameTitle,
+                    FirstName: result.FirstName,
+                    LastName: result.LastName,
+                    Student_NID: result.Student_NID,
+                    Enroll_No: result.Enroll_ID,
+                    // Enroll_No: result.Enroll_No,
+                    Enroll_Year: result.Enroll_Year,
+                    Enroll_Course: result.Enroll_Course,
+                    Enroll_Status: result.Enroll_Status
+                }));
+
+                return res.status(200).json(formattedData);
+            }
+        );
+    } catch (err) {
+        console.log(err);
+        return res.status(500).send();
+    }
+});
+
+// คิวรี่ข้อมูลการสมัครเรียนด้วย
+router.get("/CheckEnroll_status", async (req, res) => {
+    const Enroll_ID = req.query.Enroll_ID;
+    // const Enroll_ID = req.query.Enroll_ID;
+    const Enroll_Year = req.query.Enroll_Year;
+    const Enroll_Course = req.query.Enroll_Course;
+
+    try {
+        connection.query(
+            "SELECT app.NameTitle, app.FirstName, app.LastName, app.Student_NID, enroll.Enroll_ID, enroll.Enroll_Year, enroll.Enroll_Course, enroll.Enroll_Status FROM applicant AS app JOIN enrollment AS enroll ON app.Applicant_ID = enroll.Enroll_ID WHERE enroll.Enroll_ID = ? AND enroll.Enroll_Year = ? AND enroll.Enroll_Course = ?",
+            [Enroll_ID, Enroll_Year, Enroll_Course],
+            (err, results, fields) => {
+                if (err) {
+                    console.log("Error while retrieving data from the database", err);
+                    return res.status(500).json({ error: err.message });
+                }
+
+                if (results.length === 0) {
+                    return res.status(404).json({ error: "Applicant not found" });
+                }
+
+                // Map through the results array to format the data
+                const formattedData = results.map(result => ({
+                    NameTitle: result.NameTitle,
+                    FirstName: result.FirstName,
+                    LastName: result.LastName,
+                    Student_NID: result.Student_NID,
+                    Enroll_No: result.Enroll_ID,
+                    Enroll_Year: result.Enroll_Year,
+                    Enroll_Course: result.Enroll_Course,
+                    Enroll_Status: result.Enroll_Status
+                }));
+
+                return res.status(200).json(formattedData);
+            }
+        );
+    } catch (err) {
+        console.log(err);
+        return res.status(500).send();
+    }
+});
+
+
+//คิวรี่ข้อมูลของผู้สมัครจาก parentEmail สำหรับนำมาแสดงบน dropdown
+router.get("/dropdownArray_EnrollStatus/:parentEmail", async (req, res) => {
+    const parentEmail = req.params.parentEmail;
+
+    try {
+        // Query to get Student_NIDs from Applicant_ParentEmail table based on the provided ParentEmail
+        connection.query(
+            "SELECT Student_NID FROM Applicant_ParentEmail WHERE first_ParentEmail = ? OR second_ParentEmail = ? OR third_ParentEmail = ?",
+            [parentEmail, parentEmail, parentEmail],
+            (err, parentEmailResults, fields) => {
+                if (err) {
+                    console.log("Error while retrieving data from the database", err);
+                    return res.status(500).json({ error: err.message });
+                }
+
+                if (parentEmailResults.length === 0) {
+                    return res.status(404).json({ error: "No applicant found with this email" });
+                }
+
+                const studentNIDs = parentEmailResults.map(result => result.Student_NID);
+
+                // Query to fetch details from Applicant table based on the obtained Student_NIDs
+                connection.query(
+                    "SELECT app.FirstName, app.LastName, enroll.Enroll_ID, enroll.Enroll_Year, enroll.Enroll_Course FROM Applicant AS app INNER JOIN Enrollment AS enroll ON app.Student_NID = enroll.Student_NID WHERE app.Student_NID IN (?)",
+                    [studentNIDs],
+                    (err, applicantResults, fields) => {
+                        if (err) {
+                            console.log("Error while retrieving data from the database", err);
+                            return res.status(500).json({ error: err.message });
+                        }
+                
+                        if (applicantResults.length === 0) {
+                            return res.status(404).json({ error: "No applicant details found" });
+                        }
+
+                        // Prepare the data in the desired format
+                        const formattedData = {
+                            array: Array.from(new Set(studentNIDs)), // Convert to Set to remove duplicates
+                            Name: Array.from(new Set(applicantResults.map(result => result.FirstName + " " + result.LastName))),
+                            Enroll_ID: Array.from(new Set(applicantResults.map(result => result.Enroll_ID))),
+                            Enroll_Year: Array.from(new Set(applicantResults.map(result => result.Enroll_Year))),
+                            Enroll_Course: Array.from(new Set(applicantResults.map(result => result.Enroll_Course)))
+                        };
+
+                        return res.status(200).json([formattedData]);
+                    }
+                );
+                
+            }
+        );
+    } catch (err) {
+        console.log(err);
+        return res.status(500).send();
+    }
+});
+
+//คิวรี่สำหรับหาข้อมูลของผู้สมัคร เพื่อที่จะนำมาใช้ในการแสดงข้อมูลการสมัครเรียน แบบ default
+// router.get("/defaultData_EnrollStatus/:parentEmail", async (req, res) => {
+//     const parentEmail = req.params.parentEmail;
+
+//     try {
+//         // Query to get Student_NIDs from Applicant_ParentEmail table based on the provided ParentEmail
+//         connection.query(
+//             "SELECT Student_NID FROM Applicant_ParentEmail WHERE first_ParentEmail = ? OR second_ParentEmail = ? OR third_ParentEmail = ?",
+//             [parentEmail, parentEmail, parentEmail],
+//             (err, parentEmailResults, fields) => {
+//                 if (err) {
+//                     console.log("Error while retrieving data from the database", err);
+//                     return res.status(500).json({ error: err.message });
+//                 }
+
+//                 if (parentEmailResults.length === 0) {
+//                     return res.status(404).json({ error: "No applicant found with this email" });
+//                 }
+
+//                 const studentNIDs = parentEmailResults.map(result => result.Student_NID);
+
+//                 // Query to fetch details from Applicant table based on the obtained Student_NIDs
+//                 connection.query(
+//                     "SELECT app.FirstName, app.LastName, enroll.Enroll_ID, enroll.Enroll_Year, enroll.Enroll_Course FROM Applicant AS app INNER JOIN Enrollment AS enroll ON app.Student_NID = enroll.Student_NID WHERE app.Student_NID IN (?)",
+//                     [studentNIDs],
+//                     (err, applicantResults, fields) => {
+//                         if (err) {
+//                             console.log("Error while retrieving data from the database", err);
+//                             return res.status(500).json({ error: err.message });
+//                         }
+                
+//                         if (applicantResults.length === 0) {
+//                             return res.status(404).json({ error: "No applicant details found" });
+//                         }
+
+//                         // Prepare the data in the desired format
+//                         // Convert to Set to remove duplicates
+//                         const formattedData = {
+//                             // array: Array.from(new Set(studentNIDs)), 
+//                             array: Array.from(studentNIDs), 
+//                             Name: Array.from(new Set(applicantResults.map(result => result.FirstName + " " + result.LastName))),
+//                             Enroll_ID: Array.from(new Set(applicantResults.map(result => result.Enroll_ID))),
+//                             Enroll_Year: Array.from(new Set(applicantResults.map(result => result.Enroll_Year))),
+//                             Enroll_Course: Array.from(new Set(applicantResults.map(result => result.Enroll_Course)))
+//                         };
+
+//                         // Query to find the maximum Enroll_Year
+//                         const maxEnrollYear = Math.max(...formattedData.Enroll_Year);
+//                         const maxEnrollID = Math.max(...formattedData.Enroll_ID);
+                        
+//                         // Count unique values of Enroll_Course
+//                         const uniqueEnrollCourses = new Set(formattedData.Enroll_Course);
+//                         const courseCount = uniqueEnrollCourses.size;
+
+//                         // Prepare the final response
+//                         const finalResponse = [{
+//                             Enroll_ID: maxEnrollID.toString(),
+//                             Enroll_Year: maxEnrollYear.toString(),
+//                             Enroll_Course: courseCount === 1 ? Array.from(uniqueEnrollCourses)[0] : (courseCount >= 2 ? "หลักสูตรปกติ" : "ไม่พบข้อมูลการสมัครเรียน")
+//                         }];
+
+//                         return res.status(200).json(finalResponse);
+//                     }
+//                 );
+                
+//             }
+//         );
+//     } catch (err) {
+//         console.log(err);
+//         return res.status(500).send();
+//     }
+// });
+
+router.get("/defaultData_EnrollStatus/:parentEmail", async (req, res) => {
+    const parentEmail = req.params.parentEmail;
+
+    try {
+        // Query to get Student_NIDs from Applicant_ParentEmail table based on the provided ParentEmail
+        connection.query(
+            "SELECT Student_NID FROM Applicant_ParentEmail WHERE first_ParentEmail = ? OR second_ParentEmail = ? OR third_ParentEmail = ?",
+            [parentEmail, parentEmail, parentEmail],
+            (err, parentEmailResults, fields) => {
+                if (err) {
+                    console.log("Error while retrieving data from the database", err);
+                    return res.status(500).json({ error: err.message });
+                }
+
+                if (parentEmailResults.length === 0) {
+                    return res.status(404).json({ error: "No applicant found with this email" });
+                }
+
+                const studentNIDs = parentEmailResults.map(result => result.Student_NID);
+
+                // Query to fetch details from Applicant table based on the obtained Student_NIDs
+                connection.query(
+                    "SELECT app.FirstName, app.LastName, enroll.Enroll_ID, enroll.Enroll_Year, enroll.Enroll_Course FROM Applicant AS app INNER JOIN Enrollment AS enroll ON app.Student_NID = enroll.Student_NID WHERE app.Student_NID IN (?)",
+                    [studentNIDs],
+                    (err, applicantResults, fields) => {
+                        if (err) {
+                            console.log("Error while retrieving data from the database", err);
+                            return res.status(500).json({ error: err.message });
+                        }
+                
+                        if (applicantResults.length === 0) {
+                            return res.status(404).json({ error: "No applicant details found" });
+                        }
+
+                        // Prepare the data in the desired format
+                        // Convert to Set to remove duplicates
+                        const formattedData = {
+                            array: Array.from(studentNIDs), 
+                            Name: Array.from(new Set(applicantResults.map(result => result.FirstName + " " + result.LastName))),
+                            Enroll_ID: Array.from(new Set(applicantResults.map(result => result.Enroll_ID))),
+                            Enroll_Year: Array.from(new Set(applicantResults.map(result => result.Enroll_Year))),
+                            Enroll_Course: Array.from(new Set(applicantResults.map(result => result.Enroll_Course)))
+                        };
+
+                        // Query to find the maximum Enroll_Year
+                        const maxEnrollYear = Math.max(...formattedData.Enroll_Year);
+                        const maxEnrollID = Math.max(...formattedData.Enroll_ID);
+                        
+                        // Count unique values of Enroll_Course
+                        const uniqueEnrollCourses = new Set(formattedData.Enroll_Course);
+                        const courseCount = uniqueEnrollCourses.size;
+
+                        // Prepare the final response
+                        const finalResponse = [{
+                            Enroll_ID: maxEnrollID.toString(),
+                            Enroll_Year: maxEnrollYear.toString(),
+                            Enroll_Course: courseCount === 1 ? Array.from(uniqueEnrollCourses)[0] : (courseCount >= 2 ? "หลักสูตรปกติ" : "ไม่พบข้อมูลการสมัครเรียน")
+                        }];
+
+                        // Now, using the Enroll_ID from the finalResponse, proceed with the next query
+                        const enrollID = finalResponse[0].Enroll_ID;
+                        connection.query(
+                            "SELECT app.NameTitle, app.FirstName, app.LastName, app.Student_NID, enroll.Enroll_ID, enroll.Enroll_Year, enroll.Enroll_Course, enroll.Enroll_Status FROM Applicant AS app JOIN Enrollment AS enroll ON app.Student_NID = enroll.Student_NID WHERE enroll.Enroll_ID = ?",
+                            [enrollID],
+                            (err, results, fields) => {
+                                if (err) {
+                                    console.log("Error while retrieving data from the database", err);
+                                    return res.status(500).json({ error: err.message });
+                                }
+
+                                if (results.length === 0) {
+                                    return res.status(404).json({ error: "Applicant not found" });
+                                }
+
+                                // Map through the results array to format the data
+                                const formattedData = results.map(result => ({
+                                    NameTitle: result.NameTitle,
+                                    FirstName: result.FirstName,
+                                    LastName: result.LastName,
+                                    Student_NID: result.Student_NID,
+                                    Enroll_No: result.Enroll_ID,
+                                    Enroll_Year: result.Enroll_Year,
+                                    Enroll_Course: result.Enroll_Course,
+                                    Enroll_Status: result.Enroll_Status
+                                }));
+
+                                return res.status(200).json(formattedData);
+                            }
+                        );
+
+                    }
+                );
+                
+            }
+        );
+    } catch (err) {
+        console.log(err);
+        return res.status(500).send();
+    }
+});
+
+
+
 
 
 module.exports = router;

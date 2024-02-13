@@ -21,9 +21,15 @@ router.get("/login/failed", (req, res) => {
   });
 });
 
-router.get("/logout", (req, res) => {
-  req.logout();
-  res.redirect(CLIENT_URL);
+// router.get("/logout", (req, res) => {
+//   req.logout();
+//   res.redirect(CLIENT_URL);
+// });
+router.get('/logout', function(req, res){
+  req.logout(function(err) {
+    if (err) { return next(err); }
+    res.redirect(CLIENT_URL);
+  });
 });
 
 router.get("/google", passport.authenticate("google", { scope: ["profile"] }));
@@ -36,24 +42,24 @@ router.get(
   })
 );
 
-router.get("/github", passport.authenticate("github", { scope: ["profile"] }));
+// router.get("/github", passport.authenticate("github", { scope: ["profile"] }));
 
-router.get(
-  "/github/callback",
-  passport.authenticate("github", {
-    successRedirect: CLIENT_URL,
-    failureRedirect: "/login/failed",
-  })
-);
+// router.get(
+//   "/github/callback",
+//   passport.authenticate("github", {
+//     successRedirect: CLIENT_URL,
+//     failureRedirect: "/login/failed",
+//   })
+// );
 
-router.get("/facebook", passport.authenticate("facebook", { scope: ["profile"] }));
+// router.get("/facebook", passport.authenticate("facebook", { scope: ["profile"] }));
 
-router.get(
-  "/facebook/callback",
-  passport.authenticate("facebook", {
-    successRedirect: CLIENT_URL,
-    failureRedirect: "/login/failed",
-  })
-);
+// router.get(
+//   "/facebook/callback",
+//   passport.authenticate("facebook", {
+//     successRedirect: CLIENT_URL,
+//     failureRedirect: "/login/failed",
+//   })
+// );
 
 module.exports = router
