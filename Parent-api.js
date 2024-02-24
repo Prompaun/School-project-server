@@ -2,6 +2,15 @@ var express = require('express')
 const router = express.Router();
 require('dotenv').config();
 
+
+const path = require("path");
+const iconv = require('iconv-lite');
+const { google } = require("googleapis");
+const multer = require("multer"); // import multer ก่อน stream
+const stream = require("stream"); // import stream หลังจาก multer
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
+
 const { Mutex } = require('async-mutex');
 const mutex = new Mutex();
 
@@ -87,6 +96,109 @@ router.get("/user_information/:Email", async (req, res) => {
         return res.status(500).send();
     }
 });
+
+
+const KEYFILEPATH = path.join(__dirname, "school-project-ggDrive.json");
+const SCOPES = ["https://www.googleapis.com/auth/drive"];
+
+const auth = new google.auth.GoogleAuth({
+    keyFile: KEYFILEPATH,
+    scopes: SCOPES,
+});
+
+router.post("/upload", upload.any(), async (req, res) => {
+    try {
+            console.log(req.body);
+            console.log(req.files);
+            const { body, files } = req;
+
+            // ดึงข้อมูลนักเรียนที่ส่งมาจากฟอร์ม
+            const { Student_NID, NameTitle, FirstName, LastName, Student_DOB, EducationalProof } = body;
+            const Avatar = 'hh';
+            const House_No = 'hh';
+            const Moo = 'hh';
+            const Soi = 'hh';
+            const Road = 'hh';
+            const Province = 'hh';
+            const District = 'hh';
+            const Sub_District = 'hh';
+            // const Transcript_type = 'hh';
+            const Transcript_file = 'hh';
+            const BirthCert_file = 'hh';
+            const HouseReg_file = 'hh';
+            const ParentEmail = 'hh';
+
+            // เพิ่มข้อมูลนักเรียนลงในฐานข้อมูล
+            await addApplicantToDatabase(Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, House_No, Moo, Soi, Road, Province, District, Sub_District, EducationalProof, Transcript_file, BirthCert_file, HouseReg_file, ParentEmail);
+            
+
+            console.log("yok",files);
+
+            // อัปโหลดไฟล์ที่ส่งมาไปยัง Google Drive
+            for (let f = 0; f < files.length; f += 1)
+            {
+                await uploadFile(files[f]);
+            }
+
+            res.status(200).send("Form Submitted");
+        }   
+        catch (error) {
+            if (error.status && error.message) {
+                return res.status(error.status).json({ error: error.message });
+            } else {
+                console.error(error);
+                return res.status(500).send();
+            }
+        }
+        
+
+    // catch (f) 
+    //     {
+    //         res.send(f.message);
+    //     }
+    });
+
+const uploadFile = async (fileObject) => {
+  const bufferStream = new stream.PassThrough();
+  bufferStream.end(fileObject.buffer);
+  // ใช้ iconv-lite ในการ decode ชื่อไฟล์
+  const originalFilename = iconv.decode(Buffer.from(fileObject.originalname, 'binary'), 'utf-8');
+  console.log('originalFilename', originalFilename);
+  const { data } = await google.drive({ version: "v3", auth }).files.create({
+      media: {
+          mimeType: fileObject.mimeType,
+          body: bufferStream,
+      },
+      requestBody: {
+          name: originalFilename,
+          parents: ["1r4FBXi6cFjxg_WXNiMX9mQQ1EJHmeIyw"],
+      },
+      fields: "id,name",
+  });
+  console.log(`Uploaded file ${data.name} ${data.id}`);
+  console.log(`https://drive.google.com/file/d/${data.id}`);
+};
+
+const addApplicantToDatabase = (Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, House_No, Moo, Soi, Road, Province, District, Sub_District, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file, ParentEmail) => {
+    connection.query(
+        "INSERT INTO Applicant (Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, House_No, Moo, Soi, Road, Province, District, Sub_District, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file, ParentEmail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, House_No, Moo, Soi, Road, Province, District, Sub_District, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file, ParentEmail],
+        (err, results, fields) => {
+            if (err) {
+                if (err.code === 'ER_DUP_ENTRY') {
+                    throw { status: 409, message: "Identification number already exists." };
+                } else {
+                    console.log("Error while inserting student information into the database", err);
+                    throw { status: 400, message: err.message };
+                }
+            }
+            return { status: 201, message: "Student information successfully recorded!" };
+        }
+    );
+};
+
+
+
 
 //นำข้อมูลผู้สมัครลงฐานข้อมูล
 router.post("/NewStudent_information", async (req, res) => {
