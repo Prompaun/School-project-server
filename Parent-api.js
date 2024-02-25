@@ -108,12 +108,12 @@ const auth = new google.auth.GoogleAuth({
 
 router.post("/upload", upload.any(), async (req, res) => {
     try {
-            console.log(req.body);
-            console.log(req.files);
+            console.log("req.body", req.body);
+            console.log("req.files", req.files);
             const { body, files } = req;
 
             // ดึงข้อมูลนักเรียนที่ส่งมาจากฟอร์ม
-            const { Student_NID, NameTitle, FirstName, LastName, Student_DOB, EducationalProof } = body;
+            const { Student_NID, NameTitle, FirstName, LastName, Student_DOB, EducationalProof, ParentEmail } = body;
             const Avatar = 'hh';
             const House_No = 'hh';
             const Moo = 'hh';
@@ -126,7 +126,7 @@ router.post("/upload", upload.any(), async (req, res) => {
             const Transcript_file = 'hh';
             const BirthCert_file = 'hh';
             const HouseReg_file = 'hh';
-            const ParentEmail = 'hh';
+            // const ParentEmail = 'hh';
 
             // เพิ่มข้อมูลนักเรียนลงในฐานข้อมูล
             await addApplicantToDatabase(Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, House_No, Moo, Soi, Road, Province, District, Sub_District, EducationalProof, Transcript_file, BirthCert_file, HouseReg_file, ParentEmail);
@@ -179,23 +179,27 @@ const uploadFile = async (fileObject) => {
   console.log(`https://drive.google.com/file/d/${data.id}`);
 };
 
-const addApplicantToDatabase = (Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, House_No, Moo, Soi, Road, Province, District, Sub_District, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file, ParentEmail) => {
-    connection.query(
-        "INSERT INTO Applicant (Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, House_No, Moo, Soi, Road, Province, District, Sub_District, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file, ParentEmail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, House_No, Moo, Soi, Road, Province, District, Sub_District, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file, ParentEmail],
-        (err, results, fields) => {
-            if (err) {
-                if (err.code === 'ER_DUP_ENTRY') {
-                    throw { status: 409, message: "Identification number already exists." };
+const addApplicantToDatabase = async (Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, House_No, Moo, Soi, Road, Province, District, Sub_District, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file, ParentEmail) => {
+    return new Promise((resolve, reject) => {
+        connection.query(
+            "INSERT INTO Applicant (Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, House_No, Moo, Soi, Road, Province, District, Sub_District, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file, ParentEmail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, House_No, Moo, Soi, Road, Province, District, Sub_District, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file, ParentEmail],
+            (err, results, fields) => {
+                if (err) {
+                    if (err.code === 'ER_DUP_ENTRY') {
+                        reject({ status: 409, message: "Identification number already exists." });
+                    } else {
+                        console.log("Error while inserting student information into the database", err);
+                        reject({ status: 400, message: err.message });
+                    }
                 } else {
-                    console.log("Error while inserting student information into the database", err);
-                    throw { status: 400, message: err.message };
+                    resolve({ status: 201, message: "Student information successfully recorded!" });
                 }
             }
-            return { status: 201, message: "Student information successfully recorded!" };
-        }
-    );
+        );
+    });
 };
+
 
 
 
