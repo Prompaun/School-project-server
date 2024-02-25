@@ -1,7 +1,9 @@
 const router = require("express").Router();
 const passport = require("passport");
+require('dotenv').config();
 
-const CLIENT_URL = "http://localhost:5173/";
+// const CLIENT_URL = "http://localhost:5173/";
+const CLIENT_URL = process.env.CLIENT_URL;
 
 router.get("/login/success", (req, res) => {
   if (req.user) {
@@ -32,7 +34,7 @@ router.get('/logout', function(req, res){
   });
 });
 
-router.get("/google", passport.authenticate("google", { scope: ["profile"] }));
+router.get("/google", passport.authenticate("google", { scope: ['profile', 'email'] }));
 
 router.get(
   "/google/callback",
