@@ -19,10 +19,10 @@ app.use(Parent_api);
 // app.use(Personnel_api);
 // app.use(Student_api);
 
-app.get('/NewStudent_info', (req, res) => {
-    // res.sendFile(`${__dirname}/index.html`);
-    res.sendFile("C:/Users/promp/Downloads/School-project/client/src/pages/NewStudent_info.jsx");
-  });
+// app.get('/NewStudent_info', (req, res) => {
+//     // res.sendFile(`${__dirname}/index.html`);
+//     res.sendFile("C:/Users/promp/Downloads/School-project/client/src/pages/NewStudent_info.jsx");
+//   });
 
 
 //ser port

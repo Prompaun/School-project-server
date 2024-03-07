@@ -14,6 +14,8 @@ const upload = multer({ storage: storage });
 const { Mutex } = require('async-mutex');
 const mutex = new Mutex();
 
+const { v4: uuidv4 } = require('uuid');
+
 // get the client
 const mysql = require('mysql2');
 const connection = mysql.createConnection({
@@ -199,7 +201,7 @@ router.post("/upload", upload.any(), async (req, res) => {
                             reject({ status: 400, message: err.message });
                         }
                     } else {
-                        resolve({ status: 201, message: "Student information successfully recorded!" });
+                        resolve({ status: 200, message: "Student information successfully recorded!" });
                     }
                 }
             );
@@ -276,7 +278,7 @@ router.post("/NewStudent_information", async (req, res) => {
                         return res.status(400).json({ error: err.message });
                     }
                 }
-                return res.status(201).json({ message: "Student information successfully recorded!" });
+                return res.status(200).json({ message: "Student information successfully recorded!" });
             }
         );
     } catch (err) {
@@ -396,7 +398,7 @@ router.post("/Parent_information", async (req, res) => {
                         return res.status(400).json({ error: err.message });
                     }
                 }
-                return res.status(201).json({ message: "Parent information successfully recorded!" });
+                return res.status(200).json({ message: "Parent information successfully recorded!" });
             }
         );
     } catch (err) {
@@ -436,27 +438,51 @@ router.post("/Household_information", async (req, res) => {
     }
 });
 
+// router.post('/add-parent-emails', (req, res) => {
+//     const { Student_NID, first_ParentEmail, second_ParentEmail, third_ParentEmail } = req.body;
+
+//     const query = 'INSERT INTO Applicant_ParentEmail (Student_NID, first_ParentEmail, second_ParentEmail, third_ParentEmail) VALUES (?, ?, ?, ?)';
+    
+//     connection.query(query, [Student_NID, first_ParentEmail, second_ParentEmail, third_ParentEmail], (err, results) => {
+//         if (err) {
+//             if (err.code === 'ER_DUP_ENTRY') {
+//                 // Duplicate entry error
+//                 return res.status(409).json({ error: "Email already exists." });
+//             }
+//             else{
+//                 console.error('Error adding parent emails:', err);
+//                 return res.status(500).json({ error: 'Failed to add parent emails' });
+//             }
+//         }
+//         return res.status(200).json({ message: 'Parent emails added successfully' });
+//     });
+// });
+
 router.post('/add-parent-emails', (req, res) => {
     const { Student_NID, first_ParentEmail, second_ParentEmail, third_ParentEmail } = req.body;
 
-    const query = 'INSERT INTO Applicant_ParentEmail (Student_NID, first_ParentEmail, second_ParentEmail, third_ParentEmail) VALUES (?, ?, ?, ?)';
-    
-    connection.query(query, [Student_NID, first_ParentEmail, second_ParentEmail, third_ParentEmail], (err, results) => {
-        if (err) {
-            if (err.code === 'ER_DUP_ENTRY') {
-                // Duplicate entry error
-                return res.status(409).json({ error: "Email already exists." });
+    try {
+        const query = 'INSERT INTO Applicant_ParentEmail (Student_NID, first_ParentEmail, second_ParentEmail, third_ParentEmail) VALUES (?, ?, ?, ?)';
+
+        connection.query(query, [Student_NID, first_ParentEmail, second_ParentEmail, third_ParentEmail], (err, results) => {
+            if (err) {
+                if (err.code === 'ER_DUP_ENTRY') {
+                    // Duplicate entry error
+                    return res.status(409).json({ error: "Email already exists." });
+                } else {
+                    console.error('Error adding parent emails:', err);
+                    return res.status(400).json({ error: 'Failed to add parent emails' });
+                }
             }
-            else{
-                console.error('Error adding parent emails:', err);
-                return res.status(500).json({ error: 'Failed to add parent emails' });
-            }
-        }
-        return res.status(200).json({ message: 'Parent emails added successfully' });
-    });
+            return res.status(200).json({ message: 'Parent emails added successfully' });
+        });
+    } catch (error) {
+        console.error('Error adding parent emails:', error);
+        return res.status(500).json({ error: 'Failed to add parent emails' });
+    }
 });
 
-router.get('/enrollment', (req, res) => {
+router.get('/check-student-enrollment', (req, res) => {
     const { Student_NID, Enroll_Year, Enroll_Course } = req.query;
     const sql = `SELECT * FROM Enrollment WHERE Student_NID = ? AND Enroll_Year = ? AND Enroll_Course = ?`;
   
@@ -468,7 +494,28 @@ router.get('/enrollment', (req, res) => {
         res.status(200).json(results);
       }
     });
-  });
+});
+
+router.post('/enrollment', (req, res) => {
+    try {
+        const { Student_NID, Enroll_Date, Enroll_Year, Enroll_Course, Enroll_Status } = req.body;
+
+        const query = 'INSERT INTO Enrollment (Student_NID, Enroll_Date, Enroll_Year, Enroll_Course, Enroll_Status) VALUES (?, ?, ?, ?, ?)';
+
+        connection.query(query, [Student_NID, Enroll_Date, Enroll_Year, Enroll_Course, Enroll_Status], (err, results) => {
+            if (err) {
+                console.error('Error adding enrollment:', err);
+                return res.status(400).json({ error: 'Failed to add enrollment' });
+            }
+            return res.status(200).json({ message: 'Enrollment added successfully' });
+        });
+    } catch (error) {
+        console.error('Error adding enrollment:', error);
+        return res.status(500).json({ error: 'Failed to add enrollment' });
+    }
+});
+
+
 
 // //เพิ่มข้อมูลผู้สมัครลงฐานข้อมูล
 // router.post('/addApplicant', (req, res) => {
