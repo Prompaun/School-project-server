@@ -4,7 +4,7 @@ const cors = require("cors");
 
 const session = require('express-session');
 
-const protectedRouter = require('./routes/protected-route');
+// const protectedRouter = require('./routes/protected-route');
 
 const passportSetup = require("./passport");
 const passport = require("passport");
