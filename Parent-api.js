@@ -236,11 +236,6 @@ router.post("/upload", upload.any(), async (req, res) => {
         });
       });
 
-
-
-
-
-
 //นำข้อมูลผู้สมัครลงฐานข้อมูล
 router.post("/NewStudent_information", async (req, res) => {
     const { 
