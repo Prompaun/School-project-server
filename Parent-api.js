@@ -113,34 +113,45 @@ router.post("/upload", upload.any(), async (req, res) => {
             const { body, files } = req;
 
             // ดึงข้อมูลนักเรียนที่ส่งมาจากฟอร์ม
-            const { Student_NID, NameTitle, FirstName, LastName, Student_DOB, EducationalProof, ParentEmail } = body;
-            const Avatar = 'hh';
-            const House_No = 'hh';
-            const Moo = 'hh';
-            const Soi = 'hh';
-            const Road = 'hh';
-            const Province = 'hh';
-            const District = 'hh';
-            const Sub_District = 'hh';
-            // const Transcript_type = 'hh';
-            const Transcript_file = 'hh';
-            const BirthCert_file = 'hh';
-            const HouseReg_file = 'hh';
-            // const ParentEmail = 'hh';
+            const { Student_NID, NameTitle, FirstName, LastName, Student_DOB, Transcript_type, ParentEmail, HouseNumber, Moo, Soi, Road, Province, District, SubDistrict } = body;
 
-            // เพิ่มข้อมูลนักเรียนลงในฐานข้อมูล
-            await addApplicantToDatabase(Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, House_No, Moo, Soi, Road, Province, District, Sub_District, EducationalProof, Transcript_file, BirthCert_file, HouseReg_file, ParentEmail);
-            
+            console.log("files",files);
 
-            console.log("yok",files);
-
+            const transcriptFilesUrls = [];
             // อัปโหลดไฟล์ที่ส่งมาไปยัง Google Drive
-            for (let f = 0; f < files.length; f += 1)
-            {
-                await uploadFile(files[f]);
+            for (let f = 0; f < files.length; f += 1) {
+                const data = await uploadFile(files[f]);
+                transcriptFilesUrls.push(`https://drive.google.com/file/d/${data.id}`);
             }
 
-            res.status(200).send("Form Submitted");
+            // ตรวจสอบว่ามี URL ของไฟล์ที่อัปโหลดพอสำหรับการเข้าถึงหรือไม่
+            if (transcriptFilesUrls.length >= 4) {
+                // เรียกใช้งานฟังก์ชันเพื่อเพิ่มข้อมูลลงในฐานข้อมูล
+                await addApplicantToDatabase(Student_NID, NameTitle, FirstName, LastName, Student_DOB, transcriptFilesUrls[0], HouseNumber, Moo, Soi, Road, Province, District, SubDistrict, Transcript_type, transcriptFilesUrls[1], transcriptFilesUrls[2], transcriptFilesUrls[3], ParentEmail);
+                res.status(200).send("Form Submitted");
+            } else {
+                // จัดการข้อผิดพลาดหาก URL ของไฟล์ไม่เพียงพอ
+                console.error("Not enough transcript file URLs for accessing.");
+                // ส่งคำตอบเฉพาะข้อผิดพลาดกลับไป
+                res.status(500).json({ error: "Not enough transcript file URLs for accessing." });
+            }
+
+            // อัปโหลดไฟล์ที่ส่งมาไปยัง Google Drive
+            // for (let f = 0; f < files.length; f += 1)
+            // {
+            //     // await uploadFile(files[f]);
+            //     const data = await uploadFile(files[f]);
+
+            // }
+
+            // res.status(200).send("Form Submitted");
+
+            // const Transcript_file = `https://drive.google.com/file/d/${data.id}`;
+
+
+            // เพิ่มข้อมูลนักเรียนลงในฐานข้อมูล
+            // await addApplicantToDatabase(Student_NID, NameTitle, FirstName, LastName, Student_DOB, transcriptFilesUrls[0], House_No, Moo, Soi, Road, Province, District, Sub_District, Transcript_type, transcriptFilesUrls[1], transcriptFilesUrls[2], HouseReg_file, ParentEmail);
+            // res.status(200).send("Form Submitted");
         }   
         catch (error) {
             if (error.status && error.message) {
@@ -150,55 +161,79 @@ router.post("/upload", upload.any(), async (req, res) => {
                 return res.status(500).send();
             }
         }
-        
-
-    // catch (f) 
-    //     {
-    //         res.send(f.message);
-    //     }
     });
 
-const uploadFile = async (fileObject) => {
-  const bufferStream = new stream.PassThrough();
-  bufferStream.end(fileObject.buffer);
-  // ใช้ iconv-lite ในการ decode ชื่อไฟล์
-  const originalFilename = iconv.decode(Buffer.from(fileObject.originalname, 'binary'), 'utf-8');
-  console.log('originalFilename', originalFilename);
-  const { data } = await google.drive({ version: "v3", auth }).files.create({
-      media: {
-          mimeType: fileObject.mimeType,
-          body: bufferStream,
-      },
-      requestBody: {
-          name: originalFilename,
-          parents: ["1r4FBXi6cFjxg_WXNiMX9mQQ1EJHmeIyw"],
-      },
-      fields: "id,name",
-  });
-  console.log(`Uploaded file ${data.name} ${data.id}`);
-  console.log(`https://drive.google.com/file/d/${data.id}`);
-};
+    const uploadFile = async (fileObject) => {
+        const bufferStream = new stream.PassThrough();
+        bufferStream.end(fileObject.buffer);
+        // ใช้ iconv-lite ในการ decode ชื่อไฟล์
+        const originalFilename = iconv.decode(Buffer.from(fileObject.originalname, 'binary'), 'utf-8');
+        console.log('originalFilename', originalFilename);
+        const { data } = await google.drive({ version: "v3", auth }).files.create({
+            media: {
+                mimeType: fileObject.mimeType,
+                body: bufferStream,
+            },
+            requestBody: {
+                name: originalFilename,
+                parents: ["1r4FBXi6cFjxg_WXNiMX9mQQ1EJHmeIyw"],
+            },
+            fields: "id,name",
+        });
+        console.log(`Uploaded file ${data.name} ${data.id}`);
+        console.log(`https://drive.google.com/file/d/${data.id}`);
+        return data;
+    };
 
-const addApplicantToDatabase = async (Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, House_No, Moo, Soi, Road, Province, District, Sub_District, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file, ParentEmail) => {
-    return new Promise((resolve, reject) => {
-        connection.query(
-            "INSERT INTO Applicant (Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, House_No, Moo, Soi, Road, Province, District, Sub_District, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file, ParentEmail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            [Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, House_No, Moo, Soi, Road, Province, District, Sub_District, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file, ParentEmail],
-            (err, results, fields) => {
-                if (err) {
-                    if (err.code === 'ER_DUP_ENTRY') {
-                        reject({ status: 409, message: "Identification number already exists." });
+    const addApplicantToDatabase = async (Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, House_No, Moo, Soi, Road, Province, District, Sub_District, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file, ParentEmail) => {
+        return new Promise((resolve, reject) => {
+            connection.query(
+                "INSERT INTO Applicant (Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, House_No, Moo, Soi, Road, Province, District, Sub_District, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file, ParentEmail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                [Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, House_No, Moo, Soi, Road, Province, District, Sub_District, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file, ParentEmail],
+                (err, results, fields) => {
+                    if (err) {
+                        if (err.code === 'ER_DUP_ENTRY') {
+                            reject({ status: 409, message: "Identification number already exists." });
+                        } else {
+                            console.log("Error while inserting student information into the database", err);
+                            reject({ status: 400, message: err.message });
+                        }
                     } else {
-                        console.log("Error while inserting student information into the database", err);
-                        reject({ status: 400, message: err.message });
+                        resolve({ status: 201, message: "Student information successfully recorded!" });
                     }
-                } else {
-                    resolve({ status: 201, message: "Student information successfully recorded!" });
                 }
-            }
-        );
-    });
-};
+            );
+        });
+    };
+
+    router.get('/check-email', (req, res) => {
+        const { email } = req.query;
+        console.log(email);
+        // const email = "parent3@example.com";
+      
+        // สร้าง query SQL เพื่อค้นหาอีเมลในฐานข้อมูล
+        const query = 'SELECT * FROM parent WHERE Email = ?';
+        
+        // ส่ง query ไปยังฐานข้อมูล
+        connection.query(query, [email], (err, results) => {
+          if (err) {
+            console.error('Error querying database:', err);
+            return res.status(500).json({ error: 'Database error' });
+          }
+      
+          // ตรวจสอบว่ามีผลลัพธ์จาก query หรือไม่
+          if (results.length > 0) {
+            // พบอีเมลในฐานข้อมูล
+            // res.json({ results: results });
+            res.json({ results });
+            // res.json({ found: true });
+          } else {
+            // ไม่พบอีเมลในฐานข้อมูล
+            res.json({ found: false });
+          }
+        });
+      });
+
 
 
 
@@ -400,6 +435,40 @@ router.post("/Household_information", async (req, res) => {
         return res.status(500).send();
     }
 });
+
+router.post('/add-parent-emails', (req, res) => {
+    const { Student_NID, first_ParentEmail, second_ParentEmail, third_ParentEmail } = req.body;
+
+    const query = 'INSERT INTO Applicant_ParentEmail (Student_NID, first_ParentEmail, second_ParentEmail, third_ParentEmail) VALUES (?, ?, ?, ?)';
+    
+    connection.query(query, [Student_NID, first_ParentEmail, second_ParentEmail, third_ParentEmail], (err, results) => {
+        if (err) {
+            if (err.code === 'ER_DUP_ENTRY') {
+                // Duplicate entry error
+                return res.status(409).json({ error: "Email already exists." });
+            }
+            else{
+                console.error('Error adding parent emails:', err);
+                return res.status(500).json({ error: 'Failed to add parent emails' });
+            }
+        }
+        return res.status(200).json({ message: 'Parent emails added successfully' });
+    });
+});
+
+router.get('/enrollment', (req, res) => {
+    const { Student_NID, Enroll_Year, Enroll_Course } = req.query;
+    const sql = `SELECT * FROM Enrollment WHERE Student_NID = ? AND Enroll_Year = ? AND Enroll_Course = ?`;
+  
+    connection.query(sql, [Student_NID, Enroll_Year, Enroll_Course], (err, results) => {
+      if (err) {
+        console.error('Error retrieving enrollment data:', err);
+        res.status(500).json({ error: 'An error occurred while retrieving enrollment data' });
+      } else {
+        res.status(200).json(results);
+      }
+    });
+  });
 
 // //เพิ่มข้อมูลผู้สมัครลงฐานข้อมูล
 // router.post('/addApplicant', (req, res) => {
