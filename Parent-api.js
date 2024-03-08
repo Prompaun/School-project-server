@@ -372,7 +372,7 @@ router.post("/Parent_information", async (req, res) => {
             item.Email,
             item.FirstName,
             item.LastName,
-            item.Age,
+            item.DateOfBirth,
             item.Nationality,
             item.Office,
             item.Occupation,
@@ -381,7 +381,7 @@ router.post("/Parent_information", async (req, res) => {
         ]);
 
         connection.query(
-            "INSERT INTO Parent (Avatar, Email, FirstName, LastName, Age, Nationality, Office, Occupation, Role, Tel) VALUES ?",
+            "INSERT INTO Parent (Avatar, Email, FirstName, LastName, DateOfBirth, Nationality, Office, Occupation, Role, Tel) VALUES ?",
             [values],
             (err, results, fields) => {
                 if (err) {
