@@ -655,7 +655,26 @@ router.get('/get-all-request', (req, res) => {
     });
 });
 
-router.get('/get-request', (req, res) => {
+router.get('/get-request-by-parent-email', (req, res) => {
+    const { Parent_Email } = req.query;
+
+    const sql = `
+        SELECT Request_No, Request_Date, Request_type, Request_detail, Request_status 
+        FROM Request 
+        WHERE Parent_Email = ?
+    `;
+
+    connection.query(sql, [Parent_Email], (err, results) => {
+        if (err) {
+            console.error('Error querying request information:', err);
+            return res.status(500).json({ error: 'Failed to retrieve request information' });
+        }
+
+        res.status(200).json(results);
+    });
+});
+
+router.get('/get-request-by-studentID-and-status', (req, res) => {
     const { Parent_Email, Student_ID, Request_status } = req.query;
 
     const sql = `
@@ -692,7 +711,7 @@ router.post('/save-request', (req, res) => {
     });
 });
 
-router.get('/get-student-id-by-parent-email', (req, res) => {
+router.get('/get-student-id-grade-by-parent-email', (req, res) => {
     const { email } = req.query;
 
     const sql = `
@@ -719,6 +738,35 @@ router.get('/get-student-id-by-parent-email', (req, res) => {
         return res.status(200).json(results);
     });
 });
+
+router.get('/get-student-id-request-by-parent-email', (req, res) => {
+    const { email } = req.query;
+
+    const sql = `
+        SELECT s.Student_ID, s.NameTitle, s.FirstName, s.LastName
+        FROM Student s
+        INNER JOIN Student_ParentEmail spe ON s.Student_ID = spe.Student_ID
+        WHERE s.Student_ID IN (
+            SELECT Student_ID
+            FROM Request
+        )
+        AND (spe.first_ParentEmail = ? OR spe.second_ParentEmail = ? OR spe.third_ParentEmail = ?)
+    `;
+
+    connection.query(sql, [email, email, email], (err, results) => {
+        if (err) {
+            console.error('Error querying student information:', err);
+            return res.status(500).json({ error: 'Failed to retrieve student information' });
+        }
+
+        if (results.length === 0) {
+            return res.status(404).json({ error: 'Student not found for the provided parent email' });
+        }
+
+        return res.status(200).json(results);
+    });
+});
+
 
 
 // router.get('/get-student-id-by-parent-email', (req, res) => {
