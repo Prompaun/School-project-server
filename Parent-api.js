@@ -165,76 +165,103 @@ router.post("/upload", upload.any(), async (req, res) => {
         }
     });
 
-    const uploadFile = async (fileObject) => {
-        const bufferStream = new stream.PassThrough();
-        bufferStream.end(fileObject.buffer);
-        // ใช้ iconv-lite ในการ decode ชื่อไฟล์
-        const originalFilename = iconv.decode(Buffer.from(fileObject.originalname, 'binary'), 'utf-8');
-        console.log('originalFilename', originalFilename);
-        const { data } = await google.drive({ version: "v3", auth }).files.create({
-            media: {
-                mimeType: fileObject.mimeType,
-                body: bufferStream,
-            },
-            requestBody: {
-                name: originalFilename,
-                parents: ["1r4FBXi6cFjxg_WXNiMX9mQQ1EJHmeIyw"],
-            },
-            fields: "id,name",
-        });
-        console.log(`Uploaded file ${data.name} ${data.id}`);
-        console.log(`https://drive.google.com/file/d/${data.id}`);
-        return data;
-    };
+const uploadFile = async (fileObject) => {
+    const bufferStream = new stream.PassThrough();
+    bufferStream.end(fileObject.buffer);
+    // ใช้ iconv-lite ในการ decode ชื่อไฟล์
+    const originalFilename = iconv.decode(Buffer.from(fileObject.originalname, 'binary'), 'utf-8');
+    console.log('originalFilename', originalFilename);
+    const { data } = await google.drive({ version: "v3", auth }).files.create({
+        media: {
+            mimeType: fileObject.mimeType,
+            body: bufferStream,
+        },
+        requestBody: {
+            name: originalFilename,
+            parents: ["1r4FBXi6cFjxg_WXNiMX9mQQ1EJHmeIyw"],
+        },
+        fields: "id,name",
+    });
+    console.log(`Uploaded file ${data.name} ${data.id}`);
+    console.log(`https://drive.google.com/file/d/${data.id}`);
+    return data;
+};
 
-    const addApplicantToDatabase = async (Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, House_No, Moo, Soi, Road, Province, District, Sub_District, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file, ParentEmail) => {
-        return new Promise((resolve, reject) => {
-            connection.query(
-                "INSERT INTO Applicant (Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, House_No, Moo, Soi, Road, Province, District, Sub_District, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file, ParentEmail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                [Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, House_No, Moo, Soi, Road, Province, District, Sub_District, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file, ParentEmail],
-                (err, results, fields) => {
-                    if (err) {
-                        if (err.code === 'ER_DUP_ENTRY') {
-                            reject({ status: 409, message: "Identification number already exists." });
-                        } else {
-                            console.log("Error while inserting student information into the database", err);
-                            reject({ status: 400, message: err.message });
-                        }
+const addApplicantToDatabase = async (Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, House_No, Moo, Soi, Road, Province, District, Sub_District, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file, ParentEmail) => {
+    return new Promise((resolve, reject) => {
+        connection.query(
+            "INSERT INTO Applicant (Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, House_No, Moo, Soi, Road, Province, District, Sub_District, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file, ParentEmail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [Student_NID, NameTitle, FirstName, LastName, Student_DOB, Avatar, House_No, Moo, Soi, Road, Province, District, Sub_District, Transcript_type, Transcript_file, BirthCert_file, HouseReg_file, ParentEmail],
+            (err, results, fields) => {
+                if (err) {
+                    if (err.code === 'ER_DUP_ENTRY') {
+                        reject({ status: 409, message: "Identification number already exists." });
                     } else {
-                        resolve({ status: 200, message: "Student information successfully recorded!" });
+                        console.log("Error while inserting student information into the database", err);
+                        reject({ status: 400, message: err.message });
                     }
+                } else {
+                    resolve({ status: 200, message: "Student information successfully recorded!" });
                 }
-            );
-        });
-    };
+            }
+        );
+    });
+};
 
-    router.get('/check-email', (req, res) => {
-        const { email } = req.query;
-        console.log(email);
-        // const email = "parent3@example.com";
-      
-        // สร้าง query SQL เพื่อค้นหาอีเมลในฐานข้อมูล
-        const query = 'SELECT * FROM parent WHERE Email = ?';
-        
-        // ส่ง query ไปยังฐานข้อมูล
-        connection.query(query, [email], (err, results) => {
-          if (err) {
-            console.error('Error querying database:', err);
-            return res.status(500).json({ error: 'Database error' });
-          }
-      
-          // ตรวจสอบว่ามีผลลัพธ์จาก query หรือไม่
-          if (results.length > 0) {
-            // พบอีเมลในฐานข้อมูล
-            // res.json({ results: results });
-            res.json({ results });
-            // res.json({ found: true });
-          } else {
-            // ไม่พบอีเมลในฐานข้อมูล
-            res.json({ found: false });
-          }
-        });
-      });
+router.get('/check-email', (req, res) => {
+    const { email } = req.query;
+    console.log(email);
+    // const email = "parent3@example.com";
+    
+    // สร้าง query SQL เพื่อค้นหาอีเมลในฐานข้อมูล
+    const query = 'SELECT * FROM parent WHERE Email = ?';
+    
+    // ส่ง query ไปยังฐานข้อมูล
+    connection.query(query, [email], (err, results) => {
+        if (err) {
+        console.error('Error querying database:', err);
+        return res.status(500).json({ error: 'Database error' });
+        }
+    
+        // ตรวจสอบว่ามีผลลัพธ์จาก query หรือไม่
+        if (results.length > 0) {
+        // พบอีเมลในฐานข้อมูล
+        // res.json({ results: results });
+        res.json({ results });
+        // res.json({ found: true });
+        } else {
+        // ไม่พบอีเมลในฐานข้อมูล
+        res.json({ found: false });
+        }
+    });
+    });
+
+//   router.get('/check-email', (req, res) => {
+//     const { email, role } = req.query;
+//     console.log(email);
+//     // const email = "parent3@example.com";
+
+//     // สร้าง query SQL เพื่อค้นหาอีเมลในฐานข้อมูลโดยมีเงื่อนไข role
+//     const query = 'SELECT * FROM parent WHERE Email = ? AND Role = ?';
+    
+//     // ส่ง query ไปยังฐานข้อมูล
+//     connection.query(query, [email, role], (err, results) => {
+//       if (err) {
+//         console.error('Error querying database:', err);
+//         return res.status(500).json({ error: 'Database error' });
+//       }
+
+//       // ตรวจสอบว่ามีผลลัพธ์จาก query หรือไม่
+//       if (results.length > 0) {
+//         // พบอีเมลในฐานข้อมูล
+//         res.json({ found: true });
+//       } else {
+//         // ไม่พบอีเมลในฐานข้อมูล
+//         res.json({ found: false });
+//       }
+//     });
+// });
+
 
 //นำข้อมูลผู้สมัครลงฐานข้อมูล
 router.post("/NewStudent_information", async (req, res) => {
@@ -320,7 +347,7 @@ router.post("/NewStudent_information", async (req, res) => {
 //     }
 // });
 
-//กำหนดเลข Applicant_ID ของผู้สมัคร จาก Student_NID
+// กำหนดเลข Applicant_ID ของผู้สมัคร จาก Student_NID
 router.patch("/Define_Applicant_ID/:Student_NID", async (req, res) => {
     const Student_NID = req.params.Student_NID;
     const applicant_ID = req.body.applicant_ID;
@@ -354,6 +381,30 @@ router.patch("/Define_Applicant_ID/:Student_NID", async (req, res) => {
     } catch (err) {
         console.log(err);
         return res.status(500).send();
+    }
+});
+
+router.post('/add-parent-login', (req, res) => {
+    const { Avatar, Email, Token } = req.body;
+    
+    try {
+        const query =  'INSERT INTO Parent_Login (Avatar, Email, Token) VALUES (?, ?, ?)';
+        connection.query(query, [Avatar, Email, Token], (err, result) => {
+            if (err) {
+                console.error('Error adding parent login:', err);
+                if (err.code === 'ER_DUP_ENTRY') {
+                    // Duplicate entry error
+                    return res.status(409).json({ error: "Email already exists." });
+                } else {
+                    // Other database error
+                    return res.status(400).json({ error: 'An error occurred while adding parent login' });
+                }
+            }
+            return res.status(200).json({ message: 'Parent login created successfully' });
+        });
+    } catch (error) {
+        console.error('Error adding parent login:', error);
+        return res.status(500).json({ error: 'Failed to add parent login' });
     }
 });
 
@@ -510,7 +561,492 @@ router.post('/enrollment', (req, res) => {
     }
 });
 
+// router.get('/get-student-info', (req, res) => {
+//     const { studentId } = req.query;
 
+//     const sql = `
+//         SELECT Student_ID, FirstName, LastName
+//         FROM Student
+//         WHERE Student_ID = ?
+//     `;
+
+//     connection.query(sql, [studentId], (err, results) => {
+//         if (err) {
+//             console.error('Error querying student information:', err);
+//             return res.status(500).json({ error: 'Failed to retrieve student information' });
+//         }
+
+//         if (results.length === 0) {
+//             return res.status(404).json({ error: 'Student not found' });
+//         }
+
+//         const studentInfo = results[0];
+//         return res.status(200).json(studentInfo);
+//     });
+// });
+
+router.get('/get-student-id', (req, res) => {
+    const { email } = req.query;
+
+    const sql = `
+        SELECT Student_ID 
+        FROM Student_ParentEmail 
+        WHERE first_ParentEmail = ? OR second_ParentEmail = ? OR third_ParentEmail = ?
+    `;
+
+    connection.query(sql, [email, email, email], (err, results) => {
+        if (err) {
+            console.error('Error retrieving student ID:', err);
+            return res.status(500).json({ error: 'Failed to retrieve student ID' });
+        }
+
+        if (results.length === 0) {
+            return res.status(404).json({ error: 'Student ID not found for the provided email' });
+        }
+
+        const studentID = results.map(result => result.Student_ID);
+        // const studentID = results[0].Student_ID;
+        return res.status(200).json({ Student_ID: studentID });
+    });
+});
+
+router.get('/get-student-info', (req, res) => {
+    const { studentIds } = req.query;
+
+    // แปลง studentIds จาก string เป็น array โดยใช้ split(',')
+    const studentIdArray = studentIds.split(',');
+
+    const sql = `
+        SELECT Student_ID, FirstName, LastName
+        FROM Student
+        WHERE Student_ID IN (?)
+    `;
+
+    connection.query(sql, [studentIdArray], (err, results) => {
+        if (err) {
+            console.error('Error querying student information:', err);
+            return res.status(500).json({ error: 'Failed to retrieve student information' });
+        }
+
+        if (results.length === 0) {
+            return res.status(404).json({ error: 'Students not found' });
+        }
+
+        return res.status(200).json(results);
+    });
+});
+
+router.get('/get-all-request', (req, res) => {
+    const { Parent_Email, Student_ID } = req.query;
+
+    const sql = `
+        SELECT Request_No, Request_Date, Request_type, Request_detail, Request_status 
+        FROM Request 
+        WHERE Parent_Email = ? AND Student_ID = ?
+    `;
+
+    connection.query(sql, [Parent_Email, Student_ID], (err, results) => {
+        if (err) {
+            console.error('Error querying request information:', err);
+            return res.status(500).json({ error: 'Failed to retrieve request information' });
+        }
+
+        res.status(200).json(results);
+    });
+});
+
+router.get('/get-request', (req, res) => {
+    const { Parent_Email, Student_ID, Request_status } = req.query;
+
+    const sql = `
+        SELECT Request_No, Request_Date, Request_type, Request_detail, Request_status 
+        FROM Request 
+        WHERE Parent_Email = ? AND Student_ID = ? AND Request_status = ?
+    `;
+
+    connection.query(sql, [Parent_Email, Student_ID, Request_status], (err, results) => {
+        if (err) {
+            console.error('Error querying request information:', err);
+            return res.status(500).json({ error: 'Failed to retrieve request information' });
+        }
+
+        res.status(200).json(results);
+    });
+});
+
+router.post('/save-request', (req, res) => {
+    const { Student_ID, Parent_Email, Request_Date, Request_type, Requested_Copies, Request_detail, Request_StudentPicture, Request_status } = req.body;
+
+    const sql = `
+        INSERT INTO Request (Student_ID, Parent_Email, Request_Date, Request_type, Requested_Copies, Request_detail, Request_StudentPicture, Request_status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    connection.query(sql, [Student_ID, Parent_Email, Request_Date, Request_type, Requested_Copies, Request_detail, Request_StudentPicture, Request_status], (err, results) => {
+        if (err) {
+            console.error('Error saving request information:', err);
+            return res.status(500).json({ error: 'Failed to save request information' });
+        }
+
+        return res.status(200).json({ message: 'Request information saved successfully' });
+    });
+});
+
+router.get('/get-student-id-by-parent-email', (req, res) => {
+    const { email } = req.query;
+
+    const sql = `
+        SELECT s.Student_ID, s.NameTitle, s.FirstName, s.LastName
+        FROM Student s
+        INNER JOIN Student_ParentEmail spe ON s.Student_ID = spe.Student_ID
+        WHERE s.Student_ID IN (
+            SELECT Student_ID
+            FROM Grade
+        )
+        AND (spe.first_ParentEmail = ? OR spe.second_ParentEmail = ? OR spe.third_ParentEmail = ?)
+    `;
+
+    connection.query(sql, [email, email, email], (err, results) => {
+        if (err) {
+            console.error('Error querying student information:', err);
+            return res.status(500).json({ error: 'Failed to retrieve student information' });
+        }
+
+        if (results.length === 0) {
+            return res.status(404).json({ error: 'Student not found for the provided parent email' });
+        }
+
+        return res.status(200).json(results);
+    });
+});
+
+
+// router.get('/get-student-id-by-parent-email', (req, res) => {
+//     const { email } = req.query;
+
+//     const sql = `
+//         SELECT Student_ID, NameTitle, FirstName, LastName
+//         FROM Student
+//         WHERE Student_ID IN (
+//             SELECT Student_ID
+//             FROM Student_ParentEmail
+//             WHERE first_ParentEmail = ? OR second_ParentEmail = ? OR third_ParentEmail = ?
+//         )
+//     `;
+
+//     connection.query(sql, [email, email, email], (err, results) => {
+//         if (err) {
+//             console.error('Error querying student information:', err);
+//             return res.status(500).json({ error: 'Failed to retrieve student information' });
+//         }
+
+//         if (results.length === 0) {
+//             return res.status(404).json({ error: 'Student not found for the provided parent email' });
+//         }
+
+//         return res.status(200).json(results);
+//     });
+// });
+
+router.get('/get-years-by-student-id', (req, res) => {
+    const { studentId } = req.query;
+
+    const sql = `
+        SELECT DISTINCT Year
+        FROM Grade
+        WHERE Student_ID = ?
+    `;
+
+    connection.query(sql, [studentId], (err, results) => {
+        if (err) {
+            console.error('Error querying years by student ID:', err);
+            return res.status(500).json({ error: 'Failed to retrieve years' });
+        }
+
+        const years = results.map(result => result.Year);
+        return res.status(200).json(years);
+    });
+});
+
+router.get('/get-semesters-by-student-id', (req, res) => {
+    const { studentId, Year } = req.query;
+
+    const sql = `
+        SELECT DISTINCT Semester
+        FROM Grade
+        WHERE Student_ID = ? AND Year = ?
+    `;
+
+    connection.query(sql, [studentId, Year], (err, results) => {
+        if (err) {
+            console.error('Error querying semesters by student ID:', err);
+            return res.status(500).json({ error: 'Failed to retrieve semesters' });
+        }
+
+        const semesters = results.map(result => result.Semester);
+        return res.status(200).json(semesters);
+    });
+});
+
+router.get('/get-year-semesters-by-student-id', (req, res) => {
+    const { studentId } = req.query;
+
+    const sql = `
+        SELECT DISTINCT Year, Semester
+        FROM Grade
+        WHERE Student_ID = ?
+    `;
+
+    connection.query(sql, [studentId], (err, results) => {
+        if (err) {
+            console.error('Error querying year and semesters by student ID:', err);
+            return res.status(500).json({ error: 'Failed to retrieve year and semesters' });
+        }
+
+        return res.status(200).json(results);
+    });
+});
+
+router.get('/get-grade-info', (req, res) => {
+    const { studentId, year, semester } = req.query;
+
+    const sql = `
+        SELECT Grade.Subject_ID, Grade.Full_score_mid, Grade.Score_mid, Grade.Full_score_final, 
+               Grade.Score_final, Grade.Total_score, Grade.Subject_grade, Subject.Subject_Name, 
+               Subject.Subject_Credit
+        FROM Grade
+        INNER JOIN Subject ON Grade.Subject_ID = Subject.Subject_ID
+        WHERE Grade.Student_ID = ? AND Grade.Year = ? AND Grade.Semester = ?
+    `;
+
+    connection.query(sql, [studentId, year, semester], (err, results) => {
+        if (err) {
+            console.error('Error querying grade information:', err);
+            return res.status(500).json({ error: 'Failed to retrieve grade information' });
+        }
+
+        return res.status(200).json(results);
+    });
+});
+
+router.get('/get-health-info', (req, res) => {
+    const { studentId, year } = req.query;
+
+    const sql = `
+        SELECT Overall_Results, Growth_Nutrition, Summary_Health
+        FROM Health_Overview
+        WHERE Student_ID = ? AND Year = ?
+    `;
+
+    connection.query(sql, [studentId, year], (err, results) => {
+        if (err) {
+            console.error('Error querying health information:', err);
+            return res.status(500).json({ error: 'Failed to retrieve health information' });
+        }
+
+        if (results.length === 0) {
+            return res.status(404).json({ error: 'Health information not found' });
+        }
+
+        const healthInfo = results[0];
+        return res.status(200).json(healthInfo);
+    });
+});
+
+router.get('/get-growth-nutrition-info', (req, res) => {
+    const { studentId, year, semester } = req.query;
+
+    const sql = `
+        SELECT Health_Check_Date, Student_Age, Height, Weight
+        FROM Growth_Nutrition
+        WHERE Student_ID = ? AND Year = ? AND Semester = ?
+    `;
+
+    connection.query(sql, [studentId, year, semester], (err, results) => {
+        if (err) {
+            console.error('Error querying growth nutrition information:', err);
+            return res.status(500).json({ error: 'Failed to retrieve growth nutrition information' });
+        }
+
+        return res.status(200).json(results);
+    });
+});
+
+router.get('/get-health-check-info', (req, res) => {
+    const { studentId } = req.query;
+
+    const sql = `
+        SELECT Date, Eye_examination, Hearing, Oral_health
+        FROM Health_Check
+        WHERE Student_ID = ?
+    `;
+
+    connection.query(sql, [studentId], (err, results) => {
+        if (err) {
+            console.error('Error querying health check information:', err);
+            return res.status(500).json({ error: 'Failed to retrieve health check information' });
+        }
+
+        return res.status(200).json(results);
+    });
+});
+
+router.get('/get-basic-vaccines', (req, res) => {
+    const sql = `
+        SELECT BasicVaccine_name
+        FROM Basic_Vaccine
+    `;
+
+    connection.query(sql, (err, results) => {
+        if (err) {
+            console.error('Error querying basic vaccine information:', err);
+            return res.status(500).json({ error: 'Failed to retrieve basic vaccine information' });
+        }
+
+        const basicVaccines = results.map(result => result.BasicVaccine_name);
+        return res.status(200).json(basicVaccines);
+    });
+});
+
+router.get('/get-basic-injection-info', (req, res) => {
+    const { studentId } = req.query;
+
+    const sql = `
+        SELECT ibv.Vaccinated_Date, ibv.Side_Effects, ibv.Note, bv.BasicVaccine_name
+        FROM Injection_Basic_Vaccine AS ibv
+        INNER JOIN Basic_Vaccine AS bv ON ibv.Basic_Vaccine_ID = bv.Basic_Vaccine_ID
+        WHERE ibv.Student_ID = ?
+    `;
+
+    connection.query(sql, [studentId], (err, results) => {
+        if (err) {
+            console.error('Error querying injection information:', err);
+            return res.status(500).json({ error: 'Failed to retrieve injection information' });
+        }
+
+        return res.status(200).json(results);
+    });
+});
+
+// router.get('/get-alternative-vaccine-info/:studentId', (req, res) => {
+router.get('/get-alternative-vaccine-info', (req, res) => {
+    // let studentId;
+    // if (req.query.studentId) {
+    //     studentId = req.query.studentId;
+    // } else if (req.params.studentId) {
+    //     studentId = req.params.studentId;
+    // } else {
+    //     return res.status(400).json({ error: 'Student ID is required' });
+    // }
+    const { studentId } = req.query;
+    
+    const sql = `
+      SELECT Vaccine_name, Vaccinated_Date, Side_Effects, Note
+      FROM Injection_Alternative_vaccine
+      WHERE Student_ID = ?
+    `;
+    
+    connection.query(sql, [studentId], (err, results) => {
+      if (err) {
+        console.error('Error querying alternative vaccine information:', err);
+        return res.status(500).json({ error: 'Failed to retrieve alternative vaccine information' });
+      }
+  
+      return res.status(200).json(results);
+    });
+  });
+
+router.get('/get-congenital-disease-info', (req, res) => {
+const { studentId } = req.query;
+
+// สร้างคำสั่ง SQL สำหรับดึงข้อมูล
+const sql = `
+    SELECT Date, Congenital_Disease
+    FROM congenital_disease
+    WHERE Student_ID = ?
+`;
+
+// ดำเนินการค้นหาในฐานข้อมูล
+connection.query(sql, [studentId], (err, results) => {
+    if (err) {
+            // กรณีเกิดข้อผิดพลาดในการค้นหา
+            console.error('Error querying congenital disease information:', err);
+            return res.status(500).json({ error: 'Failed to retrieve congenital disease information' });
+        }
+
+        // ส่งข้อมูลที่ค้นพบกลับไปให้กับผู้ใช้
+        return res.status(200).json(results);
+    });
+});
+
+router.get('/get-History-disease-info', (req, res) => {
+    const { studentId } = req.query;
+
+    // สร้างคำสั่ง SQL สำหรับดึงข้อมูล
+    const sql = `
+        SELECT Date, History_Disease
+        FROM History_Disease
+        WHERE Student_ID = ?
+    `;
+
+    // ดำเนินการค้นหาในฐานข้อมูล
+    connection.query(sql, [studentId], (err, results) => {
+        if (err) {
+                // กรณีเกิดข้อผิดพลาดในการค้นหา
+                console.error('Error querying History disease information:', err);
+                return res.status(500).json({ error: 'Failed to retrieve History disease information' });
+            }
+
+            // ส่งข้อมูลที่ค้นพบกลับไปให้กับผู้ใช้
+            return res.status(200).json(results);
+        });
+    });
+    
+router.get('/get-Allergies-info', (req, res) => {
+    const { studentId } = req.query;
+
+    // สร้างคำสั่ง SQL สำหรับดึงข้อมูล
+    const sql = `
+        SELECT Date, Allergies
+        FROM Allergies
+        WHERE Student_ID = ?
+    `;
+
+    // ดำเนินการค้นหาในฐานข้อมูล
+    connection.query(sql, [studentId], (err, results) => {
+        if (err) {
+                // กรณีเกิดข้อผิดพลาดในการค้นหา
+                console.error('Error querying Allergies information:', err);
+                return res.status(500).json({ error: 'Failed to retrieve Allergies information' });
+            }
+
+            // ส่งข้อมูลที่ค้นพบกลับไปให้กับผู้ใช้
+            return res.status(200).json(results);
+        });
+    });
+
+router.get('/get-Surgery_accident-info', (req, res) => {
+    const { studentId } = req.query;
+
+    // สร้างคำสั่ง SQL สำหรับดึงข้อมูล
+    const sql = `
+        SELECT Date, Surgery_accident
+        FROM Surgery_accident
+        WHERE Student_ID = ?
+    `;
+
+    // ดำเนินการค้นหาในฐานข้อมูล
+    connection.query(sql, [studentId], (err, results) => {
+        if (err) {
+                // กรณีเกิดข้อผิดพลาดในการค้นหา
+                console.error('Error querying Surgery_accident information:', err);
+                return res.status(500).json({ error: 'Failed to retrieve Surgery_accident information' });
+            }
+
+            // ส่งข้อมูลที่ค้นพบกลับไปให้กับผู้ใช้
+            return res.status(200).json(results);
+        });
+    });
 
 // //เพิ่มข้อมูลผู้สมัครลงฐานข้อมูล
 // router.post('/addApplicant', (req, res) => {
