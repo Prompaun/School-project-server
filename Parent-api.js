@@ -208,6 +208,71 @@ const addApplicantToDatabase = async (Student_NID, NameTitle, FirstName, LastNam
     });
 };
 
+router.post("/upload-student-img-request", upload.any(), async (req, res) => {
+    try {
+            console.log("req.body", req.body);
+            console.log("req.files", req.files);
+            const { body, files } = req;
+
+            // ดึงข้อมูลนักเรียนที่ส่งมาจากฟอร์ม
+            const { Student_ID, Parent_Email, Request_Date, Request_type, Requested_Copies, Request_detail, Request_status } = body;
+
+            console.log("files",files);
+
+            const requestFilesUrls = [];
+            // อัปโหลดไฟล์ที่ส่งมาไปยัง Google Drive
+            for (let f = 0; f < files.length; f += 1) {
+                const data = await uploadFile(files[f]);
+                requestFilesUrls.push(`https://drive.google.com/file/d/${data.id}`);
+            }
+
+            console.log("requestFilesUrls",requestFilesUrls);
+            // ตรวจสอบว่ามี URL ของไฟล์ที่อัปโหลดพอสำหรับการเข้าถึงหรือไม่
+            if (requestFilesUrls.length >= 1) {
+                try {
+                    await addRequestToDatabase(Student_ID, Parent_Email, Request_Date, Request_type, Requested_Copies, Request_detail, requestFilesUrls[0], Request_status);
+                    res.status(200).send("Form Submitted");
+                } catch (error) {
+                    console.error(error);
+                    res.status(500).json({ error: "Failed to save request information" });
+                }
+            } else {
+                console.error("Not enough transcript file URLs for accessing.");
+                res.status(500).json({ error: "Not enough transcript file URLs for accessing." });
+            }
+            
+        }   
+        catch (error) {
+            if (error.status && error.message) {
+                return res.status(error.status).json({ error: error.message });
+            } else {
+                console.error(error);
+                return res.status(500).send();
+            }
+        }
+    });
+
+    const addRequestToDatabase = async (Student_ID, Parent_Email, Request_Date, Request_type, Requested_Copies, Request_detail, Request_StudentPicture, Request_status) => {
+        const sql = `
+            INSERT INTO Request (Student_ID, Parent_Email, Request_Date, Request_type, Requested_Copies, Request_detail, Request_StudentPicture, Request_status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+    
+        connection.query(sql, [Student_ID, Parent_Email, Request_Date, Request_type, Requested_Copies, Request_detail, Request_StudentPicture, Request_status], (err, results) => {
+            if (err) {
+                console.error('Error saving request information:', err);
+                // ไม่ต้องส่งคำตอบกลับในที่นี้
+                // res.status(500).json({ error: 'Failed to save request information' });
+            }
+    
+            // ไม่ต้องส่งคำตอบกลับในที่นี้
+            // res.status(200).json({ message: 'Request information saved successfully' });
+        });
+    };
+    
+    
+    
+
 router.get('/check-email', (req, res) => {
     const { email } = req.query;
     console.log(email);
@@ -767,34 +832,32 @@ router.get('/get-student-id-request-by-parent-email', (req, res) => {
     });
 });
 
+router.get('/get-student-id-by-parent-email', (req, res) => {
+    const { email } = req.query;
 
+    const sql = `
+        SELECT Student_ID, NameTitle, FirstName, LastName
+        FROM Student
+        WHERE Student_ID IN (
+            SELECT Student_ID
+            FROM Student_ParentEmail
+            WHERE first_ParentEmail = ? OR second_ParentEmail = ? OR third_ParentEmail = ?
+        )
+    `;
 
-// router.get('/get-student-id-by-parent-email', (req, res) => {
-//     const { email } = req.query;
+    connection.query(sql, [email, email, email], (err, results) => {
+        if (err) {
+            console.error('Error querying student information:', err);
+            return res.status(500).json({ error: 'Failed to retrieve student information' });
+        }
 
-//     const sql = `
-//         SELECT Student_ID, NameTitle, FirstName, LastName
-//         FROM Student
-//         WHERE Student_ID IN (
-//             SELECT Student_ID
-//             FROM Student_ParentEmail
-//             WHERE first_ParentEmail = ? OR second_ParentEmail = ? OR third_ParentEmail = ?
-//         )
-//     `;
+        if (results.length === 0) {
+            return res.status(404).json({ error: 'Student not found for the provided parent email' });
+        }
 
-//     connection.query(sql, [email, email, email], (err, results) => {
-//         if (err) {
-//             console.error('Error querying student information:', err);
-//             return res.status(500).json({ error: 'Failed to retrieve student information' });
-//         }
-
-//         if (results.length === 0) {
-//             return res.status(404).json({ error: 'Student not found for the provided parent email' });
-//         }
-
-//         return res.status(200).json(results);
-//     });
-// });
+        return res.status(200).json(results);
+    });
+});
 
 router.get('/get-years-by-student-id', (req, res) => {
     const { studentId } = req.query;
