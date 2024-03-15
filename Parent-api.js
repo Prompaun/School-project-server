@@ -215,7 +215,8 @@ router.post("/upload-student-img-request", upload.any(), async (req, res) => {
             const { body, files } = req;
 
             // ดึงข้อมูลนักเรียนที่ส่งมาจากฟอร์ม
-            const { Student_ID, Parent_Email, Request_Date, Request_type, Requested_Copies, Request_detail, Request_status } = body;
+            // const { Student_ID, Parent_Email, Request_Date, Request_type, Requested_Copies, Request_detail, Request_status } = body;
+            const { CheckRequestStudent, CheckRequestTranscript, Student_ID, Parent_Email, Request_Date, AmountRequestStudent, AmountRequestTranscript, Request_detail, Request_status } = body;
 
             console.log("files",files);
 
@@ -228,9 +229,21 @@ router.post("/upload-student-img-request", upload.any(), async (req, res) => {
 
             console.log("requestFilesUrls",requestFilesUrls);
             // ตรวจสอบว่ามี URL ของไฟล์ที่อัปโหลดพอสำหรับการเข้าถึงหรือไม่
+            console.log("111111",AmountRequestStudent);
+            console.log("2222222",AmountRequestTranscript);
             if (requestFilesUrls.length >= 1) {
                 try {
-                    await addRequestToDatabase(Student_ID, Parent_Email, Request_Date, Request_type, Requested_Copies, Request_detail, requestFilesUrls[0], Request_status);
+                    // await addRequestToDatabase(Student_ID, Parent_Email, Request_Date, Request_type, Requested_Copies, Request_detail, requestFilesUrls[0], Request_status);
+                    console.log("777777777",CheckRequestStudent);
+                    if(CheckRequestStudent === "true"){
+                        console.log("555555555",AmountRequestTranscript);
+                        await addRequestToDatabase(Student_ID, Parent_Email, Request_Date, 'ปพ.7', AmountRequestStudent, Request_detail, requestFilesUrls[0], Request_status);
+                    }
+
+                    if(CheckRequestTranscript === "true"){
+                        await addRequestToDatabase(Student_ID, Parent_Email, Request_Date, 'ปพ.1', AmountRequestTranscript, Request_detail, requestFilesUrls[0], Request_status);
+                    }
+                    
                     res.status(200).send("Form Submitted");
                 } catch (error) {
                     console.error(error);
