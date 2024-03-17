@@ -15,15 +15,26 @@ const { Mutex } = require('async-mutex');
 const mutex = new Mutex();
 
 const { v4: uuidv4 } = require('uuid');
-
+const fs = require('fs');
 // get the client
 const mysql = require('mysql2');
 const connection = mysql.createConnection({
     host: process.env.HOST,
     user: process.env.USER,
     database: process.env.DATABASE,
-    password: process.env.PASSWORD
+    password: process.env.PASSWORD,
+    port: process.env.PORT,
+    ssl: {ca: fs.readFileSync(path.join(__dirname, process.env.SSL))}
   });
+
+  
+
+// const connection = mysql.createConnection({
+//     host: process.env.HOST,
+//     user: process.env.USER,
+//     database: process.env.DATABASE,
+//     password: process.env.PASSWORD
+//   });
 
 // ต่อ database หรือทำสิ่งอื่น ๆ ที่ต้องการกับค่า config
 // var app = express()
@@ -178,7 +189,7 @@ const uploadFile = async (fileObject) => {
         },
         requestBody: {
             name: originalFilename,
-            parents: ["1r4FBXi6cFjxg_WXNiMX9mQQ1EJHmeIyw"],
+            parents: [process.env.PARENT],
         },
         fields: "id,name",
     });
@@ -766,7 +777,7 @@ router.get('/get-request-by-studentID-and-status', (req, res) => {
             console.error('Error querying request information:', err);
             return res.status(500).json({ error: 'Failed to retrieve request information' });
         }
-
+        console.log(Parent_Email, Student_ID, Request_status ,results );
         res.status(200).json(results);
     });
 });
@@ -863,7 +874,7 @@ router.get('/get-student-id-by-parent-email', (req, res) => {
             console.error('Error querying student information:', err);
             return res.status(500).json({ error: 'Failed to retrieve student information' });
         }
-
+console.log("results",results);
         if (results.length === 0) {
             return res.status(404).json({ error: 'Student not found for the provided parent email' });
         }
