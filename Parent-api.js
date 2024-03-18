@@ -874,7 +874,7 @@ router.get('/get-student-id-by-parent-email', (req, res) => {
             console.error('Error querying student information:', err);
             return res.status(500).json({ error: 'Failed to retrieve student information' });
         }
-console.log("results",results);
+
         if (results.length === 0) {
             return res.status(404).json({ error: 'Student not found for the provided parent email' });
         }
