@@ -16,6 +16,7 @@ app.use(cors())
 
 //use routes
 app.use(Parent_api);
+app.use(Personnel_api);
 // app.use(Personnel_api);
 // app.use(Student_api);
 
